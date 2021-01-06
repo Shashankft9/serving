@@ -80,6 +80,7 @@ func (c *Reconciler) reconcileDeployment(ctx context.Context, rev *v1.Revision) 
 	// If a container keeps crashing (no active pods in the deployment although we want some)
 	if *deployment.Spec.Replicas > 0 && deployment.Status.AvailableReplicas == 0 {
 		pods, err := c.kubeclient.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: metav1.FormatLabelSelector(deployment.Spec.Selector)})
+		logger.Info("FAILED1")
 		if err != nil {
 			logger.Errorw("Error getting pods", zap.Error(err))
 			return nil
@@ -99,7 +100,10 @@ func (c *Reconciler) reconcileDeployment(ctx context.Context, rev *v1.Revision) 
 
 			for _, status := range pod.Status.ContainerStatuses {
 				if status.Name == rev.Spec.GetContainer().Name {
+					logger.Info("FAILED2")
+					logger.Infof("last state termination: %v", status.LastTerminationState.Terminated)
 					if t := status.LastTerminationState.Terminated; t != nil {
+						logger.Info("FAILED3")
 						logger.Infof("marking exiting with: %d/%s", t.ExitCode, t.Message)
 						rev.Status.MarkContainerHealthyFalse(v1.ExitCodeReason(t.ExitCode), v1.RevisionContainerExitingMessage(t.Message))
 					} else if w := status.State.Waiting; w != nil && hasDeploymentTimedOut(deployment) {
@@ -191,3 +195,4 @@ func hasDeploymentTimedOut(deployment *appsv1.Deployment) bool {
 	}
 	return false
 }
+
